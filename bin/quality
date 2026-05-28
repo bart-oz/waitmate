@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Waitmate Quality Gate Suite
+# Runs all non-negotiable gates in sequence.
+# Usage: bin/quality [--skip-appraisal]
+#
+# Individual gates can be run via:
+#   bin/quality rspec
+#   bin/quality standardrb
+#   bin/quality appraisal
+#   bin/quality audit
+
+SKIP_APPRAISAL=false
+SINGLE_GATE=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --skip-appraisal) SKIP_APPRAISAL=true ;;
+    rspec|standardrb|appraisal|audit) SINGLE_GATE="$arg" ;;
+  esac
+done
+
+red()   { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+green() { printf '\033[32m%s\033[0m\n' "$*"; }
+dim()   { printf '\033[2m%s\033[0m\n' "$*"; }
+
+run_gate() {
+  local label="$1"; shift
+  dim "⏳ ${label}..."
+  if "$@" > /dev/null 2>&1; then
+    green "✅ ${label}"
+    return 0
+  else
+    red "❌ ${label} FAILED — check output above"
+    return 1
+  fi
+}
+
+gate_rspec() {
+  run_gate "RSpec" bundle exec rspec
+}
+
+gate_standardrb() {
+  run_gate "StandardRB" bundle exec standardrb
+}
+
+gate_appraisal() {
+  run_gate "Rails 7.1 appraisal" bundle exec appraisal rails-7.1 rspec \
+    && run_gate "Rails 7.2 appraisal" bundle exec appraisal rails-7.2 rspec \
+    && run_gate "Rails 8.0 appraisal" bundle exec appraisal rails-8.0 rspec
+}
+
+gate_audit() {
+  dim "⏳ bundler-audit: updating advisory DB..."
+  bundle exec bundler-audit update > /dev/null 2>&1 || true
+  run_gate "bundler-audit" bundle exec bundler-audit check
+}
+
+run_all() {
+  local failed=0
+
+  gate_rspec      || failed=$((failed + 1))
+  gate_standardrb || failed=$((failed + 1))
+
+  if [ "$SKIP_APPRAISAL" = false ]; then
+    gate_appraisal || failed=$((failed + 1))
+  else
+    dim "⏭️  Skipping appraisal (--skip-appraisal)"
+  fi
+
+  gate_audit      || failed=$((failed + 1))
+
+  echo ""
+  if [ "$failed" -eq 0 ]; then
+    green "All quality gates passed"
+  else
+    red "${failed} gate(s) failed"
+    return 1
+  fi
+}
+
+case "$SINGLE_GATE" in
+  rspec)      gate_rspec ;;
+  standardrb) gate_standardrb ;;
+  appraisal)  gate_appraisal ;;
+  audit)      gate_audit ;;
+  "")         run_all ;;
+esac

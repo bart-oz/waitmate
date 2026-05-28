@@ -1,0 +1,24 @@
+module Waitmate
+  VERSION: String
+  RUBY_MINIMUM_VERSION: String
+  RAILS_MINIMUM_VERSION: String
+
+  class Error < StandardError
+  end
+
+  class Configuration
+    attr_accessor adapter: Symbol
+    attr_accessor queue_ttl: Integer
+    attr_accessor polling_interval: Integer
+    attr_accessor ticket_ttl: Integer
+
+    def initialize: -> void
+  end
+
+  class Engine < Rails::Engine
+  end
+
+  def self.configuration: -> Configuration
+  def self.configure: { (Configuration) -> void } -> void
+  def self.reset_configuration!: -> void
+end
