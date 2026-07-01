@@ -18,11 +18,13 @@ require "waitmate/engine" unless defined?(Waitmate::Engine)
 
 require_relative "dummy/config/environment"
 require "rspec/rails"
+require "active_support/testing/time_helpers"
 
 Rails.cache = ActiveSupport::Cache.lookup_store(:memory_store)
 
 RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
+  config.include ActiveSupport::Testing::TimeHelpers
 
   config.before(:each) do
     Rails.cache.clear if defined?(Rails.cache) && Rails.cache
