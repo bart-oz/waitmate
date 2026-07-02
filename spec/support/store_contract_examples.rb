@@ -103,6 +103,19 @@ RSpec.shared_examples "a Waitmate store" do
 
       expect(store.admit(queue_name, 0)).to be_empty
     end
+
+    it "admits waiting entries when active entries from a prior admission exist" do
+      store.enqueue(queue_name, "first")
+      store.enqueue(queue_name, "second")
+      store.admit(queue_name, 5)
+
+      store.enqueue(queue_name, "third")
+      store.enqueue(queue_name, "fourth")
+
+      admitted = store.admit(queue_name, 5)
+      expect(admitted).to contain_exactly("third", "fourth")
+      expect(store.active_count(queue_name)).to eq(4)
+    end
   end
 
   describe "#release" do

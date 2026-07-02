@@ -15,6 +15,7 @@ ENV["RAILS_ENV"] = "test"
 # the engine guard in lib/waitmate.rb skipped it; load it explicitly.
 require "waitmate"
 require "waitmate/engine" unless defined?(Waitmate::Engine)
+require "solid_cache"
 
 require_relative "dummy/config/environment"
 require "rspec/rails"
@@ -22,11 +23,14 @@ require "active_support/testing/time_helpers"
 
 Rails.cache = ActiveSupport::Cache.lookup_store(:memory_store)
 
+ActiveRecord::MigrationContext.new(Rails.root.join("db/migrate")).migrate
+
 RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.include ActiveSupport::Testing::TimeHelpers
 
   config.before(:each) do
     Rails.cache.clear if defined?(Rails.cache) && Rails.cache
+    ::SolidCache::Entry.delete_all if defined?(::SolidCache::Entry)
   end
 end

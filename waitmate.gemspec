@@ -23,4 +23,5 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= #{Waitmate::RUBY_MINIMUM_VERSION}"
   spec.add_dependency "rails", ">= #{Waitmate::RAILS_MINIMUM_VERSION}"
   spec.add_dependency "redis", "~> 5.0"
+  spec.add_dependency "solid_cache", ">= 0.7", "< 2"
 end

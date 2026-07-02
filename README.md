@@ -35,6 +35,13 @@ Waitmate.configure do |config|
 end
 ```
 
+### Choosing an adapter
+
+- **Redis (`:redis`)** — Best for high-traffic or latency-sensitive rooms.
+- **Solid Cache (`:solid_cache`)** — Best when you want a Rails/Solid Stack setup without running Redis. It keeps the same queue correctness contract, but throughput depends on your database.
+
+For Solid Cache, install and migrate Solid Cache first, then set `config.adapter = :solid_cache`. Use Redis when you need the highest concurrency; use Solid Cache when simpler Rails-only operations matter more.
+
 ## Usage
 
 ```ruby
