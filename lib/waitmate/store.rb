@@ -62,6 +62,8 @@ module Waitmate
         case name
         when :redis
           Redis.new
+        when :solid_cache
+          SolidCache.new
         else
           raise ConfigurationError, "Unknown Waitmate adapter: #{name.inspect}"
         end

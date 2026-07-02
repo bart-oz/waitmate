@@ -9,6 +9,7 @@ end
 require_relative "waitmate/configuration"
 require_relative "waitmate/store"
 require_relative "waitmate/store/redis"
+require_relative "waitmate/store/solid_cache"
 require_relative "waitmate/engine" if defined?(Rails::Engine)
 
 module Waitmate
