@@ -11,6 +11,7 @@ require_relative "waitmate/ticket"
 require_relative "waitmate/store"
 require_relative "waitmate/store/redis"
 require_relative "waitmate/store/solid_cache"
+require_relative "waitmate/controller_concern"
 require_relative "waitmate/engine" if defined?(Rails::Engine)
 
 module Waitmate

@@ -2,4 +2,7 @@
 
 Rails.application.routes.draw do
   mount Waitmate::Engine => "/waitmate"
+
+  get "waitmate_test/index", to: "waitmate_test#index"
+  get "waitmate_test/public", to: "waitmate_test#public"
 end
