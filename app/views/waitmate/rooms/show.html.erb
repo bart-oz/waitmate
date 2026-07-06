@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Waiting Room</title>
+  <style>
+    :root {
+      --wm-bg: #ffffff;
+      --wm-text: #111827;
+      --wm-muted: #6b7280;
+      --wm-rule: #d1d5db;
+      --wm-accent: #2563eb;
+      --wm-success: #15803d;
+      --wm-danger: #b91c1c;
+      --wm-focus: #1d4ed8;
+      --wm-shell-max: 640px;
+      --wm-radius: 14px;
+      --wm-space-2: 8px;
+      --wm-space-3: 12px;
+      --wm-space-4: 16px;
+      --wm-space-6: 24px;
+      --wm-space-8: 32px;
+      --wm-space-10: 40px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--wm-bg);
+      color: var(--wm-text);
+      line-height: 1.5;
+    }
+
+    .wm-room {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: var(--wm-space-6);
+    }
+
+    .wm-room__shell {
+      width: min(100%, var(--wm-shell-max));
+      padding: var(--wm-space-10);
+      border: 1px solid var(--wm-rule);
+      border-radius: var(--wm-radius);
+      text-align: center;
+    }
+
+    .wm-room__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--wm-space-2);
+      padding: var(--wm-space-2) var(--wm-space-3);
+      border-radius: 999px;
+      border: 1px solid var(--wm-rule);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--wm-muted);
+    }
+
+    .wm-room__badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--wm-accent);
+    }
+
+    .wm-room__title {
+      margin: var(--wm-space-6) 0 var(--wm-space-4);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .wm-room__metric {
+      margin: var(--wm-space-6) 0;
+      padding: var(--wm-space-6) 0;
+      border-top: 1px solid var(--wm-rule);
+      border-bottom: 1px solid var(--wm-rule);
+    }
+
+    .wm-room__metric-label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--wm-muted);
+      margin-bottom: var(--wm-space-2);
+    }
+
+    .wm-room__metric-value {
+      display: block;
+      font-size: 4rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--wm-text);
+    }
+
+    .wm-room__message {
+      margin: 0 0 var(--wm-space-6);
+      color: var(--wm-muted);
+      font-size: 1rem;
+    }
+
+    .wm-room__actions {
+      display: flex;
+      justify-content: center;
+      gap: var(--wm-space-3);
+    }
+
+    .wm-room__rule {
+      border: none;
+      border-top: 1px solid var(--wm-rule);
+    }
+
+    .wm-room__button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--wm-space-3) var(--wm-space-4);
+      border: 1px solid var(--wm-rule);
+      border-radius: var(--wm-radius);
+      background: var(--wm-bg);
+      color: var(--wm-text);
+      font-size: 1rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .wm-room__button:focus {
+      outline: 2px solid var(--wm-focus);
+      outline-offset: 3px;
+    }
+
+    .wm-room__button[hidden] {
+      display: none;
+    }
+
+    .wm-room__progress {
+      height: 2px;
+      margin-top: var(--wm-space-6);
+      background: var(--wm-accent);
+      border-radius: 1px;
+      transform: translateX(-100%);
+      animation: wm-progress 1000ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .wm-room__progress[hidden] {
+      display: none;
+    }
+
+    @keyframes wm-progress {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(100%); }
+    }
+
+    .is-admitted .wm-room__badge-dot {
+      background: var(--wm-success);
+    }
+
+    .is-error .wm-room__badge-dot {
+      background: var(--wm-danger);
+    }
+
+    .is-admitted .wm-room__progress {
+      display: block;
+    }
+
+    .is-error .wm-room__metric,
+    .is-error .wm-room__progress,
+    .is-admitted[hidden] {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .wm-room__progress {
+        animation: none;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .wm-room__shell {
+        padding: var(--wm-space-6);
+      }
+
+      .wm-room__title {
+        font-size: 1.75rem;
+      }
+
+      .wm-room__metric-value {
+        font-size: 3.5rem;
+      }
+
+      .wm-room__actions {
+        flex-direction: column;
+      }
+
+      .wm-room__button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="wm-room">
+  <main class="wm-room__shell <%= @error ? "is-error" : "is-queued" %>" aria-labelledby="wm-room-title">
+    <div class="wm-room__badge">
+      <span class="wm-room__badge-dot"></span>
+      <span class="wm-room__badge-text" id="wm-badge-text">
+        <%= @error ? "Retrying" : "Waiting" %>
+      </span>
+    </div>
+
+    <h1 id="wm-room-title" class="wm-room__title">
+      <%= @error ? "Still holding your place" : "You're in line" %>
+    </h1>
+
+    <div class="wm-room__metric" id="wm-metric" aria-live="polite" <% if @error %>hidden<% end %>>
+      <span class="wm-room__metric-label">Place in line</span>
+      <span class="wm-room__metric-value" id="wm-position"><%= @position %></span>
+    </div>
+
+    <p class="wm-room__message" id="wm-message">
+      <% if @error %>
+        We couldn't update your place. We'll try again shortly.
+      <% else %>
+        Keep this tab open — we'll send you through automatically.
+      <% end %>
+    </p>
+
+    <div class="wm-room__actions">
+      <button class="wm-room__button" id="wm-retry" <% unless @error %>hidden<% end %>>Retry now</button>
+      <a class="wm-room__button" id="wm-continue" href="#" hidden>Continue</a>
+    </div>
+
+    <div class="wm-room__progress" id="wm-progress" hidden></div>
+  </main>
+
+  <% unless @error %>
+    <script>
+      (function() {
+        var shell = document.querySelector('.wm-room__shell');
+        var badgeText = document.getElementById('wm-badge-text');
+        var title = document.getElementById('wm-room-title');
+        var metric = document.getElementById('wm-metric');
+        var positionEl = document.getElementById('wm-position');
+        var message = document.getElementById('wm-message');
+        var retryBtn = document.getElementById('wm-retry');
+        var continueLink = document.getElementById('wm-continue');
+        var progress = document.getElementById('wm-progress');
+
+        var target = <%= raw json_escape(@target.to_json) %>;
+        var ticket = <%= raw json_escape(@ticket.to_json) %>;
+        var pollUrl = <%= raw json_escape(room_position_path(ticket: @ticket, queue: @queue).to_json) %>;
+        var interval = <%= Waitmate.configuration.polling_interval * 1000 %>;
+
+        var timer = null;
+
+        function setState(state) {
+          shell.classList.remove('is-queued', 'is-admitted', 'is-error');
+          shell.classList.add('is-' + state);
+        }
+
+        function navigateToTarget() {
+          var separator = target.indexOf('?') === -1 ? '?' : '&';
+          window.location.href = target + separator + 'ticket=' + encodeURIComponent(ticket);
+        }
+
+        function schedule() {
+          clearTimeout(timer);
+          var jitter = interval * (0.8 + Math.random() * 0.4);
+          timer = setTimeout(poll, jitter);
+        }
+
+        function showQueued(position) {
+          setState('queued');
+          badgeText.textContent = 'Waiting';
+          title.textContent = "You're in line";
+          metric.hidden = false;
+          positionEl.textContent = position;
+          message.textContent = 'Keep this tab open — we'll send you through automatically.';
+          retryBtn.hidden = true;
+          continueLink.hidden = true;
+          progress.hidden = true;
+        }
+
+        function showAdmitted() {
+          setState('admitted');
+          badgeText.textContent = 'Admitted';
+          title.textContent = "You're next";
+          metric.hidden = true;
+          message.textContent = 'Redirecting you now…';
+          retryBtn.hidden = true;
+          continueLink.hidden = false;
+          continueLink.href = target + (target.indexOf('?') === -1 ? '?' : '&') + 'ticket=' + encodeURIComponent(ticket);
+          progress.hidden = false;
+          navigateToTarget();
+        }
+
+        function showError() {
+          setState('error');
+          badgeText.textContent = 'Retrying';
+          title.textContent = 'Still holding your place';
+          metric.hidden = true;
+          message.textContent = "We couldn't update your place. We'll try again shortly.";
+          retryBtn.hidden = false;
+          continueLink.hidden = true;
+          progress.hidden = true;
+        }
+
+        function poll() {
+          fetch(pollUrl, {headers: {'Accept': 'application/json'}})
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+              if (data.admitted) {
+                showAdmitted();
+              } else if (data.position === null) {
+                showError();
+                schedule();
+              } else {
+                showQueued(data.position);
+                schedule();
+              }
+            })
+            .catch(function() {
+              showError();
+              schedule();
+            });
+        }
+
+        retryBtn.addEventListener('click', function() {
+          showQueued(positionEl.textContent || '—');
+          poll();
+        });
+
+        continueLink.addEventListener('click', function(event) {
+          event.preventDefault();
+          navigateToTarget();
+        });
+
+        schedule();
+      })();
+    </script>
+  <% end %>
+</body>
+</html>

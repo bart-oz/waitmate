@@ -4,6 +4,23 @@ require "active_support"
 require "active_support/concern"
 
 module Waitmate
+  # Shared validation for the relative target URL that is threaded between the
+  # host controller and the Engine waiting room. Keeping this in one place
+  # ensures the concern-emit path and the room-redirect path never diverge.
+  module TargetValidation
+    extend ActiveSupport::Concern
+
+    included { private }
+
+    def valid_waiting_room_target?(target)
+      return false unless target.is_a?(String) && target.start_with?("/")
+      return false if target.start_with?("//")
+      return false if target.include?("://")
+      return false if target.match?(/\Ajavascript:/i)
+      true
+    end
+  end
+
   # Provides the +wait_room+ controller macro. Host controllers include this
   # concern and declare which actions are capacity-gated:
   #
@@ -17,6 +34,7 @@ module Waitmate
   # ActionCable, or full-page reloads.
   module ControllerConcern
     extend ActiveSupport::Concern
+    include TargetValidation
 
     class_methods do
       def wait_room(action, max_concurrent:)
@@ -44,24 +62,29 @@ module Waitmate
       return if Store.position(queue_name, session_id) == 0
 
       redirect_to_waiting_room(
-        ticket: Ticket.issue(queue_name: queue_name, session_id: session_id)
+        ticket: Ticket.issue(queue_name: queue_name, session_id: session_id),
+        queue: queue_name,
+        target: request.fullpath
       )
     end
 
     def handle_return(queue_name, session_id, max_concurrent)
       result = Ticket.verify(token: params[:ticket], queue_name: queue_name, session_id: session_id)
-      return redirect_to_waiting_room unless result.success?
+      target = request.fullpath
+      return redirect_to_waiting_room(queue: queue_name, target: target) unless result.success?
 
       Store.admit(queue_name, max_concurrent, count: 1)
 
       return if Store.position(queue_name, session_id) == 0
 
-      redirect_to_waiting_room
+      redirect_to_waiting_room(ticket: params[:ticket], queue: queue_name, target: target)
     end
 
-    def redirect_to_waiting_room(ticket: nil)
+    def redirect_to_waiting_room(ticket: nil, queue: nil, target: nil)
       path = Waitmate.configuration.waiting_room_path
-      path += "?#{{ticket: ticket}.to_query}" if ticket
+      query = {ticket: ticket, queue: queue}.compact
+      query[:target] = target if valid_waiting_room_target?(target)
+      path += "?#{query.to_query}" if query.any?
       redirect_to(path)
     end
   end

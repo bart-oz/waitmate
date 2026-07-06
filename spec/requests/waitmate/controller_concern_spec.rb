@@ -9,6 +9,9 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
   end
 
   after do
+    if defined?(::SolidCache::Entry)
+      ::SolidCache::Entry.where("key LIKE ?", "waitmate:%").delete_all
+    end
     Waitmate::Store.reset_adapter!
     Waitmate.reset_configuration!
   end
@@ -55,7 +58,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       Waitmate::Store.admit("index", 2)
 
       get "/waitmate_test/index"
-      expect(response).to redirect_to(%r{/waitmate/room\?ticket=})
+      expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
 
       Waitmate::Store.release("index", "other-1")
@@ -65,6 +68,31 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to eq("admitted")
+    end
+  end
+
+  describe "re-queued path" do
+    it "redirects back to the waiting room with target when capacity is still full" do
+      Waitmate::Store.enqueue("index", "other-1")
+      Waitmate::Store.enqueue("index", "other-2")
+      Waitmate::Store.admit("index", 2)
+
+      get "/waitmate_test/index"
+      expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
+      token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
+
+      get "/waitmate_test/index", params: {ticket: token}
+      expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
+
+      location = response.location
+      query = URI.decode_www_form(URI(location).query || "").to_h
+      expect(query["ticket"]).to eq(token)
+      expect(query["queue"]).to eq("index")
+      expect(query["target"]).to include("/waitmate_test/index")
+
+      get location
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("You're in line")
     end
   end
 
