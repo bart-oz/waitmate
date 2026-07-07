@@ -146,13 +146,18 @@ module Waitmate
             # Separate waiting prefix guarantees all returned rows are waiting.
             # No Ruby-side state filter needed — fixes the S2-NEWBUG capacity bug.
             # Sort by enqueued_at from the JSON value for FIFO ordering.
-            waiting = ::SolidCache::Entry
-              .where("key LIKE ?", waiting_key_pattern(queue_name))
-              .to_a
-              .map { |entry| [entry, parse_value(entry.value, key: entry.key)] }
-              .select { |_, value| value["expires_at"] > now }
-              .sort_by { |_, value| value["enqueued_at"] }
-              .first(admit_count)
+            # uncached is required because SolidCache's own write/delete methods do
+            # not dirty the Rails query cache, so a subsequent scan in the same
+            # request (e.g. release → admit) could read stale waiting rows.
+            waiting = ::SolidCache::Entry.uncached do
+              ::SolidCache::Entry
+                .where("key LIKE ?", waiting_key_pattern(queue_name))
+                .to_a
+                .map { |entry| [entry, parse_value(entry.value, key: entry.key)] }
+                .select { |_, value| value["expires_at"] > now }
+                .sort_by { |_, value| value["enqueued_at"] }
+                .first(admit_count)
+            end
 
             waiting.each do |entry, value|
               identity = identity_from_key(entry.key, queue_name)
@@ -280,22 +285,26 @@ module Waitmate
       # full queue. Ruby-side JSON parsing for expires_at is unavoidable
       # because Solid Cache's KV schema has no per-entry TTL column.
       def active_count_internal(queue_name, now)
-        ::SolidCache::Entry
-          .where("key LIKE ?", active_key_pattern(queue_name))
-          .count do |entry|
-            parse_value(entry.value, key: entry.key)["expires_at"] > now
-          end
+        ::SolidCache::Entry.uncached do
+          ::SolidCache::Entry
+            .where("key LIKE ?", active_key_pattern(queue_name))
+            .count do |entry|
+              parse_value(entry.value, key: entry.key)["expires_at"] > now
+            end
+        end
       end
 
       # Counts non-expired waiting entries with enqueued_at <= target.
       # Scans only the waiting key prefix; does not touch active rows.
       def waiting_position(queue_name, enqueued_at, now)
-        ::SolidCache::Entry
-          .where("key LIKE ?", waiting_key_pattern(queue_name))
-          .count do |entry|
-            value = parse_value(entry.value, key: entry.key)
-            value["expires_at"] > now && value["enqueued_at"] <= enqueued_at
-          end
+        ::SolidCache::Entry.uncached do
+          ::SolidCache::Entry
+            .where("key LIKE ?", waiting_key_pattern(queue_name))
+            .count do |entry|
+              value = parse_value(entry.value, key: entry.key)
+              value["expires_at"] > now && value["enqueued_at"] <= enqueued_at
+            end
+        end
       end
 
       def ensure_mutex(queue_name)
@@ -312,17 +321,21 @@ module Waitmate
         waiting_count = 0
         active_count = 0
 
-        ::SolidCache::Entry.where("key LIKE ?", waiting_key_pattern(queue_name)).each do |entry|
-          if parse_value(entry.value, key: entry.key)["expires_at"] <= now
-            ::SolidCache::Entry.delete_by_key(entry.key)
-            waiting_count += 1
+        ::SolidCache::Entry.uncached do
+          ::SolidCache::Entry.where("key LIKE ?", waiting_key_pattern(queue_name)).each do |entry|
+            if parse_value(entry.value, key: entry.key)["expires_at"] <= now
+              ::SolidCache::Entry.delete_by_key(entry.key)
+              waiting_count += 1
+            end
           end
         end
 
-        ::SolidCache::Entry.where("key LIKE ?", active_key_pattern(queue_name)).each do |entry|
-          if parse_value(entry.value, key: entry.key)["expires_at"] <= now
-            ::SolidCache::Entry.delete_by_key(entry.key)
-            active_count += 1
+        ::SolidCache::Entry.uncached do
+          ::SolidCache::Entry.where("key LIKE ?", active_key_pattern(queue_name)).each do |entry|
+            if parse_value(entry.value, key: entry.key)["expires_at"] <= now
+              ::SolidCache::Entry.delete_by_key(entry.key)
+              active_count += 1
+            end
           end
         end
 

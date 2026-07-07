@@ -36,6 +36,13 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to eq("admitted")
     end
+
+    it "releases the active slot after the action completes" do
+      get "/waitmate_test/index"
+
+      expect(response).to have_http_status(:ok)
+      expect(Waitmate::Store.active_count("index")).to eq(0)
+    end
   end
 
   describe "queued path" do
@@ -48,6 +55,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       expect(response).to redirect_to(%r{/waitmate/room})
       expect(response.location).to include("ticket=")
+      expect(Waitmate::Store.active_count("index")).to eq(2)
     end
   end
 
@@ -68,6 +76,45 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to eq("admitted")
+    end
+
+    it "releases the slot after the returned action completes" do
+      Waitmate::Store.enqueue("index", "other-1")
+      Waitmate::Store.enqueue("index", "other-2")
+      Waitmate::Store.admit("index", 2)
+
+      get "/waitmate_test/index"
+      expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
+      token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
+
+      Waitmate::Store.release("index", "other-1")
+
+      get "/waitmate_test/index", params: {ticket: token}
+      expect(response).to have_http_status(:ok)
+
+      expect(Waitmate::Store.active_count("index")).to eq(1)
+      expect(Waitmate::Store.position("index", "other-2")).to eq(0)
+    end
+
+    it "advances the next queued user after the returned action completes" do
+      Waitmate::Store.enqueue("index", "other-1")
+      Waitmate::Store.enqueue("index", "other-2")
+      Waitmate::Store.admit("index", 2)
+
+      get "/waitmate_test/index"
+      expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
+      token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
+
+      Waitmate::Store.release("index", "other-1")
+      Waitmate::Store.admit("index", 2)
+      Waitmate::Store.enqueue("index", "other-3")
+
+      get "/waitmate_test/index", params: {ticket: token}
+      expect(response).to have_http_status(:ok)
+
+      expect(Waitmate::Store.active_count("index")).to eq(2)
+      expect(Waitmate::Store.position("index", "other-2")).to eq(0)
+      expect(Waitmate::Store.position("index", "other-3")).to eq(0)
     end
   end
 
