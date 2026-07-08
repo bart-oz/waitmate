@@ -29,6 +29,10 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.include ActiveSupport::Testing::TimeHelpers
 
+  config.before(:suite) do
+    ::SolidCache::Entry.delete_all if defined?(::SolidCache::Entry)
+  end
+
   config.before(:each) do
     Rails.cache.clear if defined?(Rails.cache) && Rails.cache
     ::SolidCache::Entry.delete_all if defined?(::SolidCache::Entry)
