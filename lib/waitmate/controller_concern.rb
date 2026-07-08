@@ -39,6 +39,7 @@ module Waitmate
     class_methods do
       def wait_room(action, max_concurrent:)
         before_action(only: action) { handle_wait_room(max_concurrent: max_concurrent) }
+        after_action(only: action) { release_wait_room_slot(max_concurrent: max_concurrent) }
       end
     end
 
@@ -86,6 +87,13 @@ module Waitmate
       query[:target] = target if valid_waiting_room_target?(target)
       path += "?#{query.to_query}" if query.any?
       redirect_to(path)
+    end
+
+    def release_wait_room_slot(max_concurrent:)
+      queue_name = action_name.to_s
+      session_id = session.id.to_s
+
+      Store.admit(queue_name, max_concurrent, count: 1) if Store.release(queue_name, session_id)
     end
   end
 end

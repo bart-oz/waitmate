@@ -52,6 +52,13 @@ RSpec.shared_examples "a Waitmate store" do
 
       expect(store.position(queue_name, identity)).to eq(0)
     end
+
+    it "returns nil for an expired waiting identity" do
+      store.enqueue(queue_name, identity, ttl: 0)
+      travel 1.second
+
+      expect(store.position(queue_name, identity)).to be_nil
+    end
   end
 
   describe "#active_count" do
@@ -74,6 +81,15 @@ RSpec.shared_examples "a Waitmate store" do
       store.admit(queue_name, 2)
 
       expect(store.active_count(queue_name)).to eq(2)
+    end
+
+    it "does not count expired active entries" do
+      store.enqueue(queue_name, identity)
+      store.admit(queue_name, 1)
+
+      travel 2.hours
+
+      expect(store.active_count(queue_name)).to eq(0)
     end
   end
 
@@ -116,6 +132,17 @@ RSpec.shared_examples "a Waitmate store" do
       expect(admitted).to contain_exactly("third", "fourth")
       expect(store.active_count(queue_name)).to eq(4)
     end
+
+    it "does not admit expired waiting entries" do
+      store.enqueue(queue_name, identity, ttl: 0)
+      store.enqueue(queue_name, "second")
+      travel 1.second
+
+      admitted = store.admit(queue_name, 2)
+      expect(admitted).to eq(["second"])
+      expect(store.position(queue_name, "second")).to eq(0)
+      expect(store.position(queue_name, identity)).to be_nil
+    end
   end
 
   describe "#release" do
@@ -129,6 +156,17 @@ RSpec.shared_examples "a Waitmate store" do
 
     it "returns false for an unknown identity" do
       expect(store.release(queue_name, identity)).to be false
+    end
+
+    it "allows the next queued user to be admitted" do
+      store.enqueue(queue_name, "first")
+      store.enqueue(queue_name, "second")
+      store.enqueue(queue_name, "third")
+      store.admit(queue_name, 2)
+
+      expect(store.release(queue_name, "first")).to be true
+      expect(store.admit(queue_name, 2)).to include("third")
+      expect(store.position(queue_name, "third")).to eq(0)
     end
   end
 

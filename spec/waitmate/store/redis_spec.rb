@@ -61,7 +61,7 @@ end
 module TestRedisServer
   class << self
     def ensure_running
-      return if @running
+      return if @running || external_url?
 
       @port = find_free_port
       @dir = Dir.mktmpdir("waitmate-redis")
@@ -82,10 +82,16 @@ module TestRedisServer
 
     def connection
       ensure_running
-      ::Redis.new(port: @port)
+
+      if external_url?
+        ::Redis.new(url: ENV.fetch("WAITMATE_REDIS_URL"))
+      else
+        ::Redis.new(port: @port)
+      end
     end
 
     def shutdown
+      return if external_url?
       return unless @pid
 
       Process.kill("TERM", @pid)
@@ -96,6 +102,10 @@ module TestRedisServer
     end
 
     private
+
+    def external_url?
+      ENV.key?("WAITMATE_REDIS_URL")
+    end
 
     def find_free_port
       server = TCPServer.new("127.0.0.1", 0)

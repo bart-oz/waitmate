@@ -11,6 +11,20 @@ jobs:
     name: Ruby ${{ matrix.ruby-version }} / Rails ${{ matrix.rails-version }}
     runs-on: ubuntu-latest
 
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      WAITMATE_REDIS_URL: redis://127.0.0.1:6379/0
+
     strategy:
       fail-fast: false
       matrix:
@@ -33,9 +47,6 @@ jobs:
 
       - name: Install specific Rails version appraisal
         run: bundle exec appraisal rails-${{ matrix.rails-version }} bundle install
-
-      - name: Install Redis
-        run: sudo apt-get update && sudo apt-get install -y redis-server
 
       - name: Run tests
         run: bundle exec appraisal rails-${{ matrix.rails-version }} rspec

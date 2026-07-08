@@ -90,6 +90,12 @@ module Waitmate
 
           redis.call('ZREMRANGEBYSCORE', active_key, '-inf', now)
 
+          local expired_waiting = redis.call('ZRANGEBYSCORE', expiry_key, '-inf', now)
+          for i = 1, #expired_waiting do
+            redis.call('ZREM', queue_key, expired_waiting[i])
+            redis.call('ZREM', expiry_key, expired_waiting[i])
+          end
+
           local active_count = redis.call('ZCARD', active_key)
           local available = max_concurrent - active_count
           if available <= 0 then

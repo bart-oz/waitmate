@@ -125,7 +125,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
       expect(body["admitted"]).to be false
     end
 
-    it "does not call Store.active_count or Store.admit" do
+    it "does not call Store.active_count, Store.admit, or Store.expire_stale" do
       get "/waitmate_test/index"
       params = room_params_from_redirect
 
@@ -133,6 +133,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
       allow(Waitmate::Store).to receive(:position).and_return(1)
       expect(Waitmate::Store).not_to receive(:active_count)
       expect(Waitmate::Store).not_to receive(:admit)
+      expect(Waitmate::Store).not_to receive(:expire_stale)
 
       get "/waitmate/room/position", params: {ticket: params["ticket"], queue: params["queue"]}
 
