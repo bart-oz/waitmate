@@ -53,6 +53,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       get "/waitmate_test/index"
 
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room})
       expect(response.location).to include("ticket=")
       expect(Waitmate::Store.active_count("index")).to eq(2)
@@ -66,6 +67,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       Waitmate::Store.admit("index", 2)
 
       get "/waitmate_test/index"
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
 
@@ -84,6 +86,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       Waitmate::Store.admit("index", 2)
 
       get "/waitmate_test/index"
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
 
@@ -102,6 +105,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       Waitmate::Store.admit("index", 2)
 
       get "/waitmate_test/index"
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
 
@@ -125,10 +129,12 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
       Waitmate::Store.admit("index", 2)
 
       get "/waitmate_test/index"
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       token = URI.decode_www_form(URI(response.location).query || "").to_h["ticket"]
 
       get "/waitmate_test/index", params: {ticket: token}
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
 
       location = response.location
@@ -147,6 +153,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
     it "redirects to the waiting room when the ticket is invalid" do
       get "/waitmate_test/index", params: {ticket: "not-a-valid-ticket"}
 
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room})
     end
 
@@ -155,6 +162,7 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       get "/waitmate_test/index", params: {ticket: token}
 
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room})
       expect(response.body).not_to eq("admitted")
     end
@@ -164,8 +172,41 @@ RSpec.describe Waitmate::ControllerConcern, type: :request do
 
       get "/waitmate_test/index", params: {ticket: token}
 
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room})
       expect(response.body).not_to eq("admitted")
+    end
+  end
+
+  describe "POST queued path" do
+    it "returns 303 with ticket, queue, and target for a plain POST" do
+      Waitmate::Store.enqueue("create", "other-1")
+      Waitmate::Store.enqueue("create", "other-2")
+      Waitmate::Store.admit("create", 2)
+
+      post "/waitmate_test/create"
+
+      expect(response).to have_http_status(:see_other)
+      expect(response.location).to include("/waitmate/room")
+      query = URI.decode_www_form(URI(response.location).query || "").to_h
+      expect(query["ticket"]).to be_present
+      expect(query["queue"]).to eq("create")
+      expect(query["target"]).to include("/waitmate_test/create")
+    end
+
+    it "returns 303 with ticket, queue, and target for a Turbo-shaped POST" do
+      Waitmate::Store.enqueue("create", "other-1")
+      Waitmate::Store.enqueue("create", "other-2")
+      Waitmate::Store.admit("create", 2)
+
+      post "/waitmate_test/create", headers: {"Accept" => "text/vnd.turbo-stream.html, text/html"}
+
+      expect(response).to have_http_status(:see_other)
+      expect(response.location).to include("/waitmate/room")
+      query = URI.decode_www_form(URI(response.location).query || "").to_h
+      expect(query["ticket"]).to be_present
+      expect(query["queue"]).to eq("create")
+      expect(query["target"]).to include("/waitmate_test/create")
     end
   end
 end

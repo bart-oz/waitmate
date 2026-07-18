@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Waitmate
-  VERSION = "0.1.0"
+  VERSION = "0.2.0"
   RUBY_MINIMUM_VERSION = "3.2.0"
   RAILS_MINIMUM_VERSION = "7.1.0"
 end

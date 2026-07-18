@@ -40,6 +40,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("You're in line")
       expect(response.body).to include("Place in line")
+      expect(response.body).to include('<meta name="turbo-visit-control" content="reload">')
     end
 
     it "redirects back to the protected target when the user is admitted" do
@@ -51,6 +52,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
 
       get "/waitmate/room", params: room_query(ticket: params["ticket"], queue: params["queue"])
 
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate_test/index\?ticket=})
     end
 
@@ -153,6 +155,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
   describe "concern-to-room-to-target flow" do
     it "redirects through the room and back to the protected action" do
       get "/waitmate_test/index"
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate/room\?.*ticket=})
       room_url = response.location
       params = room_params_from_redirect
@@ -168,6 +171,7 @@ RSpec.describe Waitmate::RoomsController, type: :request do
       expect(body["admitted"]).to be true
 
       get room_url
+      expect(response).to have_http_status(:see_other)
       expect(response).to redirect_to(%r{/waitmate_test/index\?ticket=})
 
       get response.location
