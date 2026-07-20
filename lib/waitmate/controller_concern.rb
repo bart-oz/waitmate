@@ -86,7 +86,7 @@ module Waitmate
       query = {ticket: ticket, queue: queue}.compact
       query[:target] = target if valid_waiting_room_target?(target)
       path += "?#{query.to_query}" if query.any?
-      redirect_to(path)
+      redirect_to(path, status: :see_other)
     end
 
     def release_wait_room_slot(max_concurrent:)

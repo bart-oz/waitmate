@@ -4,7 +4,7 @@ require "waitmate"
 
 RSpec.describe Waitmate do
   it "boots through require" do
-    expect(Waitmate::VERSION).to eq("0.1.0")
+    expect(Waitmate::VERSION).to eq("0.2.0")
   end
 
   describe ".configuration" do

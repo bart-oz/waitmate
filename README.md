@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/bart-oz/waitmate/releases"><img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version"></a>
+  <a href="https://github.com/bart-oz/waitmate/releases"><img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version"></a>
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://github.com/bart-oz/waitmate/actions"><img src="https://img.shields.io/badge/tests-passing-brightgreen.svg" alt="Tests"></a>
   <a href="https://github.com/bart-oz/waitmate/actions"><img src="https://img.shields.io/badge/coverage-96.36%25-brightgreen.svg" alt="Coverage"></a>
@@ -117,13 +117,34 @@ On the normal waiting path, all of the above except `@error` are present. On the
 
 The Redis adapter answers each poll in roughly O(1) time for the requesting user. The Solid Cache adapter, by design, must scan and rank waiting rows to compute a position, so each poll materializes the waiting rows for that queue. This is acceptable for moderate traffic but becomes the throughput bottleneck for large or long queues. Use Redis when polling latency and queue depth matter.
 
-## Limitations (v0.1)
+## Limitations (v0.2)
 
-- **Transport:** HTTP polling only. ActionCable/Turbo Streams are deferred to a future release.
+- **Transport:** HTTP polling only. ActionCable/Turbo Streams *push delivery* (server-initiated streams) is deferred to a future release. Turbo Drive redirect compatibility is supported since v0.2.0.
 - **Integration:** Controller concern only. No Rack middleware.
 - **Storage:** Redis and Solid Cache only. No additional adapters.
 - **Framework:** Rails-only. No standalone Rack or non-Rails support.
 - **UI:** A single, overridable ERB waiting-room page. No admin dashboard, CAPTCHA, or anti-bot functionality.
+
+### Turbo Drive escape hatches
+
+If you need to disable Turbo Drive for specific links or forms that interact with Waitmate, use the standard Turbo data attributes:
+
+```erb
+<%# Opt a single link or form out of Turbo Drive %>
+<%= link_to "Checkout", checkout_path, data: { turbo: "false" } %>
+
+<%# Or force a link to break out of any turbo-frame %>
+<%= link_to "Checkout", checkout_path, data: { turbo_frame: "_top" } %>
+```
+
+### Security: filter sensitive parameters
+
+Waitmate threads `ticket` and `target` as query parameters. Add them to your filter list so they do not appear in logs:
+
+```ruby
+# config/initializers/filter_parameter_logging.rb
+config.filter_parameters += [:ticket, :target]
+```
 
 ## Development
 

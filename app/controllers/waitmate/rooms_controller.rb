@@ -12,7 +12,7 @@ module Waitmate
 
       if pos == 0
         url = admission_url
-        return redirect_to(url) if url
+        return redirect_to(url, status: :see_other) if url
         return render_invalid
       end
 
